@@ -6,12 +6,10 @@ export class GroupController {
 
   getAllGroups = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { limit = '10', offset = '0' } = req.query;
+      // Validation is handled by middleware, data is already validated and transformed
+      const { limit, offset } = req.query as unknown as { limit: number; offset: number };
       
-      const result = await this.groupService.getAllGroups(
-        parseInt(limit as string),
-        parseInt(offset as string)
-      );
+      const result = await this.groupService.getAllGroups(limit, offset);
 
       res.status(200).json({
         success: true,
@@ -30,12 +28,10 @@ export class GroupController {
 
   removeUserFromGroup = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { groupId, userId } = req.params;
+      // Validation is handled by middleware, data is already validated and transformed
+      const { groupId, userId } = req.params as unknown as { groupId: number; userId: number };
       
-      const result = await this.groupService.removeUserFromGroup(
-        parseInt(userId as string),
-        parseInt(groupId as string)
-      );
+      const result = await this.groupService.removeUserFromGroup(userId, groupId);
 
       if (!result.success) {
         res.status(404).json({
