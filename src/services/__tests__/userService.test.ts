@@ -203,6 +203,9 @@ describe('UserService - updateUsersStatuses', () => {
         { userId: 1, status: 'active' }
       ];
 
+      // Mock console.error to suppress expected error output
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
       mockUserRepository.updateUsersStatuses.mockRejectedValue(new Error('Update failed'));
       mockQueryRunner.rollbackTransaction.mockRejectedValue(new Error('Rollback failed'));
 
@@ -211,6 +214,9 @@ describe('UserService - updateUsersStatuses', () => {
         .toThrow('Update failed');
 
       expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Rollback failed:', expect.any(Error));
+      
+      consoleErrorSpy.mockRestore();
     });
   });
 

@@ -142,6 +142,9 @@ describe('GroupService - removeUserFromGroup', () => {
     });
 
     it('should release connection even when rollback fails', async () => {
+      // Mock console.error to suppress expected error output
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
       mockGroupRepository.removeUserFromGroup.mockRejectedValue(new Error('Remove failed'));
       mockQueryRunner.rollbackTransaction.mockRejectedValue(new Error('Rollback failed'));
 
@@ -150,6 +153,9 @@ describe('GroupService - removeUserFromGroup', () => {
         .toThrow('Remove failed');
 
       expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
+      expect(consoleErrorSpy).toHaveBeenCalledWith('Rollback failed:', expect.any(Error));
+      
+      consoleErrorSpy.mockRestore();
     });
   });
 
