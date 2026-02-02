@@ -45,13 +45,25 @@ export class UserRepository implements IUserRepository {
 
   async updateUsersStatuses(updates: UserStatusUpdate[], connection: PoolConnection): Promise<number> {
     let updatedCount = 0;
+    const batchSize = 5;
 
-    for (const update of updates) {
-      const [result]: any = await connection.query(
-        'UPDATE users SET status = ? WHERE id = ?',
-        [update.status, update.userId]
+    // Process updates in batches of 5
+    for (let i = 0; i < updates.length; i += batchSize) {
+      const batch = updates.slice(i, i + batchSize);
+      
+      // Execute batch concurrently
+      const results = await Promise.all(
+        batch.map(async (update) => {
+          const [result]: any = await connection.query(
+            'UPDATE users SET status = ? WHERE id = ?',
+            [update.status, update.userId]
+          );
+          return result.affectedRows;
+        })
       );
-      updatedCount += result.affectedRows;
+
+      // Sum up affected rows from this batch
+      updatedCount += results.reduce((sum, count) => sum + count, 0);
     }
 
     return updatedCount;
