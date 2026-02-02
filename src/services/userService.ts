@@ -1,8 +1,9 @@
 import { IUserRepository } from '../repositories/userRepository';
-import { User, PaginatedResponse } from '../types';
+import { User, PaginatedResponse, UserStatusUpdate } from '../types';
 
 export interface IUserService {
   getAllUsers(limit: number, offset: number): Promise<PaginatedResponse<User>>;
+  updateUsersStatuses(updates: UserStatusUpdate[]): Promise<{ updatedCount: number }>;
 }
 
 export class UserService implements IUserService {
@@ -23,5 +24,45 @@ export class UserService implements IUserService {
         total
       }
     };
+  }
+
+  async updateUsersStatuses(updates: UserStatusUpdate[]): Promise<{ updatedCount: number }> {
+    // Validate input
+    if (!updates || updates.length === 0) {
+      throw new Error('No updates provided');
+    }
+
+    if (updates.length > 500) {
+      throw new Error('Maximum 500 users can be updated at once');
+    }
+
+    // Validate statuses
+    const validStatuses = ['pending', 'active', 'blocked'];
+    for (const update of updates) {
+      if (!validStatuses.includes(update.status)) {
+        throw new Error(`Invalid status: ${update.status}. Must be one of: ${validStatuses.join(', ')}`);
+      }
+    }
+
+    const connection = await this.userRepository.getConnection();
+
+    try {
+      // Start transaction
+      await connection.beginTransaction();
+
+      // Update users statuses
+      const updatedCount = await this.userRepository.updateUsersStatuses(updates, connection);
+
+      // Commit transaction
+      await connection.commit();
+
+      return { updatedCount };
+    } catch (error) {
+      // Rollback on error
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 }

@@ -1,12 +1,18 @@
-import { Pool, RowDataPacket } from 'mysql2/promise';
-import { User } from '../types';
+import { Pool, RowDataPacket, PoolConnection } from 'mysql2/promise';
+import { User, UserStatusUpdate } from '../types';
 
 export interface IUserRepository {
   findAll(limit: number, offset: number): Promise<{ users: User[]; total: number }>;
+  updateUsersStatuses(updates: UserStatusUpdate[], connection: PoolConnection): Promise<number>;
+  getConnection(): Promise<PoolConnection>;
 }
 
 export class UserRepository implements IUserRepository {
   constructor(private pool: Pool) {}
+
+  async getConnection(): Promise<PoolConnection> {
+    return await this.pool.getConnection();
+  }
 
   async findAll(limit: number, offset: number): Promise<{ users: User[]; total: number }> {
     const connection = await this.pool.getConnection();
@@ -35,5 +41,19 @@ export class UserRepository implements IUserRepository {
     } finally {
       connection.release();
     }
+  }
+
+  async updateUsersStatuses(updates: UserStatusUpdate[], connection: PoolConnection): Promise<number> {
+    let updatedCount = 0;
+
+    for (const update of updates) {
+      const [result]: any = await connection.query(
+        'UPDATE users SET status = ? WHERE id = ?',
+        [update.status, update.userId]
+      );
+      updatedCount += result.affectedRows;
+    }
+
+    return updatedCount;
   }
 }

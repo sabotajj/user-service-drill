@@ -29,16 +29,34 @@ export class UserController {
     }
   };
 
-  updateUsersStatuses = (req: Request, res: Response): void => {
-    const { updates } = req.body as UpdateUserStatusRequest;
-    
-    // Dummy endpoint - returns HTTP 200
-    res.status(200).json({
-      success: true,
-      message: `Updated statuses for ${updates?.length || 0} users`,
-      data: {
-        updatedCount: updates?.length || 0
+  updateUsersStatuses = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { updates } = req.body as UpdateUserStatusRequest;
+
+      if (!updates || !Array.isArray(updates)) {
+        res.status(400).json({
+          success: false,
+          message: 'Invalid request body. Expected updates array',
+          data: null
+        });
+        return;
       }
-    });
+
+      const result = await this.userService.updateUsersStatuses(updates);
+      
+      res.status(200).json({
+        success: true,
+        message: `Updated statuses for ${result.updatedCount} users`,
+        data: {
+          updatedCount: result.updatedCount
+        }
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error updating user statuses',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   };
 }
