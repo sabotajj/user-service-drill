@@ -11,6 +11,6 @@ export interface Group {
 }
 
 export interface PaginationQuery {
-  page?: string;
   limit?: string;
+  offset?: string;
 }
