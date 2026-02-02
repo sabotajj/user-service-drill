@@ -9,7 +9,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || 'rootpassword',
   database: process.env.DB_NAME || 'mydatabase',
-  synchronize: false,
+  synchronize: false, // Set to false in production
   logging: process.env.NODE_ENV === 'development',
   entities: [User, Group],
   migrations: [],

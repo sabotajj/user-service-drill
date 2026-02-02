@@ -44,30 +44,31 @@ export class UserService implements IUserService {
       }
     }
 
-    const connection = await this.userRepository.getConnection();
+    const queryRunner = await this.userRepository.getQueryRunner();
+    await queryRunner.connect();
 
     try {
       // Start transaction
-      await connection.beginTransaction();
+      await queryRunner.startTransaction();
 
       // Update users statuses
-      const updatedCount = await this.userRepository.updateUsersStatuses(updates, connection);
+      const updatedCount = await this.userRepository.updateUsersStatuses(updates, queryRunner);
 
       // Commit transaction
-      await connection.commit();
+      await queryRunner.commitTransaction();
 
       return { updatedCount };
     } catch (error) {
       // Rollback on error
       try {
-        await connection.rollback();
+        await queryRunner.rollbackTransaction();
       } catch (rollbackError) {
         // Log rollback error but don't throw - we want to release the connection
         console.error('Rollback failed:', rollbackError);
       }
       throw error;
     } finally {
-      connection.release();
+      await queryRunner.release();
     }
   }
 }

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { pool } from '../config/database';
+import { AppDataSource } from '../config/database';
 import { UserRepository } from '../repositories/userRepository';
 import { UserService } from '../services/userService';
 import { UserController } from '../controllers/userController';
@@ -7,7 +7,7 @@ import { UserController } from '../controllers/userController';
 const router = Router();
 
 // Dependency injection setup
-const userRepository = new UserRepository(pool);
+const userRepository = new UserRepository(AppDataSource);
 const userService = new UserService(userRepository);
 const userController = new UserController(userService);
 

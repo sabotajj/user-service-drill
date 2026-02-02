@@ -1,18 +1,19 @@
 import { GroupService } from '../groupService';
 import { IGroupRepository } from '../../repositories/groupRepository';
-import { PoolConnection } from 'mysql2/promise';
+import { QueryRunner } from 'typeorm';
 
 describe('GroupService - removeUserFromGroup', () => {
   let groupService: GroupService;
   let mockGroupRepository: jest.Mocked<IGroupRepository>;
-  let mockConnection: jest.Mocked<PoolConnection>;
+  let mockQueryRunner: jest.Mocked<QueryRunner>;
 
   beforeEach(() => {
-    // Mock connection
-    mockConnection = {
-      beginTransaction: jest.fn(),
-      commit: jest.fn(),
-      rollback: jest.fn(),
+    // Mock QueryRunner
+    mockQueryRunner = {
+      connect: jest.fn(),
+      startTransaction: jest.fn(),
+      commitTransaction: jest.fn(),
+      rollbackTransaction: jest.fn(),
       release: jest.fn()
     } as any;
 
@@ -22,7 +23,7 @@ describe('GroupService - removeUserFromGroup', () => {
       removeUserFromGroup: jest.fn(),
       getGroupMemberCount: jest.fn(),
       updateGroupStatus: jest.fn(),
-      getConnection: jest.fn().mockResolvedValue(mockConnection)
+      getQueryRunner: jest.fn().mockResolvedValue(mockQueryRunner)
     } as jest.Mocked<IGroupRepository>;
 
     // Create service with mocked repository
@@ -43,13 +44,13 @@ describe('GroupService - removeUserFromGroup', () => {
       expect(result.success).toBe(true);
       expect(result.message).toContain('User 1 removed from group 10');
       expect(result.message).toContain('notEmpty');
-      expect(mockConnection.beginTransaction).toHaveBeenCalledTimes(1);
-      expect(mockGroupRepository.removeUserFromGroup).toHaveBeenCalledWith(1, 10, mockConnection);
-      expect(mockGroupRepository.getGroupMemberCount).toHaveBeenCalledWith(10, mockConnection);
-      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(10, 'notEmpty', mockConnection);
-      expect(mockConnection.commit).toHaveBeenCalledTimes(1);
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
-      expect(mockConnection.rollback).not.toHaveBeenCalled();
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalledTimes(1);
+      expect(mockGroupRepository.removeUserFromGroup).toHaveBeenCalledWith(1, 10, mockQueryRunner);
+      expect(mockGroupRepository.getGroupMemberCount).toHaveBeenCalledWith(10, mockQueryRunner);
+      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(10, 'notEmpty', mockQueryRunner);
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.rollbackTransaction).not.toHaveBeenCalled();
     });
 
     it('should remove last user from group and set group status to empty', async () => {
@@ -61,11 +62,11 @@ describe('GroupService - removeUserFromGroup', () => {
       expect(result.success).toBe(true);
       expect(result.message).toContain('User 5 removed from group 20');
       expect(result.message).toContain('empty');
-      expect(mockGroupRepository.removeUserFromGroup).toHaveBeenCalledWith(5, 20, mockConnection);
-      expect(mockGroupRepository.getGroupMemberCount).toHaveBeenCalledWith(20, mockConnection);
-      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(20, 'empty', mockConnection);
-      expect(mockConnection.commit).toHaveBeenCalledTimes(1);
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockGroupRepository.removeUserFromGroup).toHaveBeenCalledWith(5, 20, mockQueryRunner);
+      expect(mockGroupRepository.getGroupMemberCount).toHaveBeenCalledWith(20, mockQueryRunner);
+      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(20, 'empty', mockQueryRunner);
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
 
     it('should remove second-to-last user and keep group as notEmpty with 1 member', async () => {
@@ -75,8 +76,8 @@ describe('GroupService - removeUserFromGroup', () => {
       const result = await groupService.removeUserFromGroup(10, 30);
 
       expect(result.success).toBe(true);
-      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(30, 'notEmpty', mockConnection);
-      expect(mockConnection.commit).toHaveBeenCalledTimes(1);
+      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(30, 'notEmpty', mockQueryRunner);
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -88,13 +89,13 @@ describe('GroupService - removeUserFromGroup', () => {
 
       expect(result.success).toBe(false);
       expect(result.message).toBe('User is not a member of this group');
-      expect(mockConnection.beginTransaction).toHaveBeenCalledTimes(1);
-      expect(mockGroupRepository.removeUserFromGroup).toHaveBeenCalledWith(1, 10, mockConnection);
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalledTimes(1);
+      expect(mockGroupRepository.removeUserFromGroup).toHaveBeenCalledWith(1, 10, mockQueryRunner);
       expect(mockGroupRepository.getGroupMemberCount).not.toHaveBeenCalled();
       expect(mockGroupRepository.updateGroupStatus).not.toHaveBeenCalled();
-      expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
-      expect(mockConnection.commit).not.toHaveBeenCalled();
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
 
     it('should rollback and throw error when remove operation fails', async () => {
@@ -105,10 +106,10 @@ describe('GroupService - removeUserFromGroup', () => {
         .rejects
         .toThrow('Database error during removal');
 
-      expect(mockConnection.beginTransaction).toHaveBeenCalledTimes(1);
-      expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
-      expect(mockConnection.commit).not.toHaveBeenCalled();
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
 
     it('should rollback and throw error when getGroupMemberCount fails', async () => {
@@ -120,9 +121,9 @@ describe('GroupService - removeUserFromGroup', () => {
         .rejects
         .toThrow('Failed to count members');
 
-      expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
-      expect(mockConnection.commit).not.toHaveBeenCalled();
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
 
     it('should rollback and throw error when updateGroupStatus fails', async () => {
@@ -135,20 +136,20 @@ describe('GroupService - removeUserFromGroup', () => {
         .rejects
         .toThrow('Failed to update status');
 
-      expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
-      expect(mockConnection.commit).not.toHaveBeenCalled();
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
 
     it('should release connection even when rollback fails', async () => {
       mockGroupRepository.removeUserFromGroup.mockRejectedValue(new Error('Remove failed'));
-      mockConnection.rollback.mockRejectedValue(new Error('Rollback failed'));
+      mockQueryRunner.rollbackTransaction.mockRejectedValue(new Error('Rollback failed'));
 
       await expect(groupService.removeUserFromGroup(1, 10))
         .rejects
         .toThrow('Remove failed');
 
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -159,7 +160,7 @@ describe('GroupService - removeUserFromGroup', () => {
 
       await groupService.removeUserFromGroup(1, 10);
 
-      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(10, 'empty', mockConnection);
+      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(10, 'empty', mockQueryRunner);
     });
 
     it('should maintain notEmpty status when exactly 1 member remains', async () => {
@@ -168,7 +169,7 @@ describe('GroupService - removeUserFromGroup', () => {
 
       await groupService.removeUserFromGroup(1, 10);
 
-      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(10, 'notEmpty', mockConnection);
+      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(10, 'notEmpty', mockQueryRunner);
     });
 
     it('should maintain notEmpty status when many members remain', async () => {
@@ -177,7 +178,7 @@ describe('GroupService - removeUserFromGroup', () => {
 
       await groupService.removeUserFromGroup(1, 10);
 
-      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(10, 'notEmpty', mockConnection);
+      expect(mockGroupRepository.updateGroupStatus).toHaveBeenCalledWith(10, 'notEmpty', mockQueryRunner);
     });
 
     it('should update status only after successful removal', async () => {
@@ -203,7 +204,7 @@ describe('GroupService - removeUserFromGroup', () => {
       const result = await groupService.removeUserFromGroup(-1, 10);
 
       expect(result.success).toBe(false);
-      expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
     });
 
     it('should handle removal with invalid group ID gracefully', async () => {
@@ -212,7 +213,7 @@ describe('GroupService - removeUserFromGroup', () => {
       const result = await groupService.removeUserFromGroup(1, -10);
 
       expect(result.success).toBe(false);
-      expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
     });
 
     it('should ensure commit happens after all operations', async () => {
@@ -222,7 +223,7 @@ describe('GroupService - removeUserFromGroup', () => {
       await groupService.removeUserFromGroup(1, 10);
 
       const updateCall = mockGroupRepository.updateGroupStatus.mock.invocationCallOrder[0];
-      const commitCall = mockConnection.commit.mock.invocationCallOrder[0];
+      const commitCall = mockQueryRunner.commitTransaction.mock.invocationCallOrder[0];
 
       expect(updateCall).toBeLessThan(commitCall);
     });
@@ -232,8 +233,8 @@ describe('GroupService - removeUserFromGroup', () => {
 
       await groupService.removeUserFromGroup(1, 10);
 
-      expect(mockConnection.commit).not.toHaveBeenCalled();
-      expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -244,7 +245,7 @@ describe('GroupService - removeUserFromGroup', () => {
 
       await groupService.removeUserFromGroup(1, 10);
 
-      const beginCall = mockConnection.beginTransaction.mock.invocationCallOrder[0];
+      const beginCall = mockQueryRunner.startTransaction.mock.invocationCallOrder[0];
       const removeCall = mockGroupRepository.removeUserFromGroup.mock.invocationCallOrder[0];
 
       expect(beginCall).toBeLessThan(removeCall);
@@ -256,7 +257,7 @@ describe('GroupService - removeUserFromGroup', () => {
 
       await groupService.removeUserFromGroup(1, 10);
 
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
 
     it('should release connection even when transaction fails', async () => {
@@ -264,7 +265,7 @@ describe('GroupService - removeUserFromGroup', () => {
 
       await expect(groupService.removeUserFromGroup(1, 10)).rejects.toThrow();
 
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
   });
 });

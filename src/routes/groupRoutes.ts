@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { pool } from '../config/database';
+import { AppDataSource } from '../config/database';
 import { GroupRepository } from '../repositories/groupRepository';
 import { GroupService } from '../services/groupService';
 import { GroupController } from '../controllers/groupController';
@@ -7,7 +7,7 @@ import { GroupController } from '../controllers/groupController';
 const router = Router();
 
 // Dependency injection setup
-const groupRepository = new GroupRepository(pool);
+const groupRepository = new GroupRepository(AppDataSource);
 const groupService = new GroupService(groupRepository);
 const groupController = new GroupController(groupService);
 

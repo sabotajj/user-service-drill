@@ -27,18 +27,19 @@ export class GroupService implements IGroupService {
   }
 
   async removeUserFromGroup(userId: number, groupId: number): Promise<{ success: boolean; message: string }> {
-    const connection = await this.groupRepository.getConnection();
+    const queryRunner = await this.groupRepository.getQueryRunner();
+    await queryRunner.connect();
     
     try {
       // Start transaction
-      await connection.beginTransaction();
+      await queryRunner.startTransaction();
 
       // Remove user from group
-      const removed = await this.groupRepository.removeUserFromGroup(userId, groupId, connection);
+      const removed = await this.groupRepository.removeUserFromGroup(userId, groupId, queryRunner);
 
       if (!removed) {
         try {
-          await connection.rollback();
+          await queryRunner.rollbackTransaction();
         } catch (rollbackError) {
           console.error('Rollback failed:', rollbackError);
         }
@@ -49,14 +50,14 @@ export class GroupService implements IGroupService {
       }
 
       // Check remaining members in the group
-      const memberCount = await this.groupRepository.getGroupMemberCount(groupId, connection);
+      const memberCount = await this.groupRepository.getGroupMemberCount(groupId, queryRunner);
 
       // Update group status based on member count
       const newStatus = memberCount === 0 ? 'empty' : 'notEmpty';
-      await this.groupRepository.updateGroupStatus(groupId, newStatus, connection);
+      await this.groupRepository.updateGroupStatus(groupId, newStatus, queryRunner);
 
       // Commit transaction
-      await connection.commit();
+      await queryRunner.commitTransaction();
 
       return {
         success: true,
@@ -65,13 +66,13 @@ export class GroupService implements IGroupService {
     } catch (error) {
       // Rollback on error
       try {
-        await connection.rollback();
+        await queryRunner.rollbackTransaction();
       } catch (rollbackError) {
         console.error('Rollback failed:', rollbackError);
       }
       throw error;
     } finally {
-      connection.release();
+      await queryRunner.release();
     }
   }
 }

@@ -1,19 +1,20 @@
 import { UserService } from '../userService';
 import { IUserRepository } from '../../repositories/userRepository';
 import { UserStatusUpdate } from '../../types';
-import { PoolConnection } from 'mysql2/promise';
+import { QueryRunner } from 'typeorm';
 
 describe('UserService - updateUsersStatuses', () => {
   let userService: UserService;
   let mockUserRepository: jest.Mocked<IUserRepository>;
-  let mockConnection: jest.Mocked<PoolConnection>;
+  let mockQueryRunner: jest.Mocked<QueryRunner>;
 
   beforeEach(() => {
-    // Mock connection
-    mockConnection = {
-      beginTransaction: jest.fn(),
-      commit: jest.fn(),
-      rollback: jest.fn(),
+    // Mock QueryRunner
+    mockQueryRunner = {
+      connect: jest.fn(),
+      startTransaction: jest.fn(),
+      commitTransaction: jest.fn(),
+      rollbackTransaction: jest.fn(),
       release: jest.fn()
     } as any;
 
@@ -21,7 +22,7 @@ describe('UserService - updateUsersStatuses', () => {
     mockUserRepository = {
       findAll: jest.fn(),
       updateUsersStatuses: jest.fn(),
-      getConnection: jest.fn().mockResolvedValue(mockConnection)
+      getQueryRunner: jest.fn().mockResolvedValue(mockQueryRunner)
     } as jest.Mocked<IUserRepository>;
 
     // Create service with mocked repository
@@ -44,11 +45,11 @@ describe('UserService - updateUsersStatuses', () => {
       const result = await userService.updateUsersStatuses(updates);
 
       expect(result.updatedCount).toBe(2);
-      expect(mockConnection.beginTransaction).toHaveBeenCalledTimes(1);
-      expect(mockUserRepository.updateUsersStatuses).toHaveBeenCalledWith(updates, mockConnection);
-      expect(mockConnection.commit).toHaveBeenCalledTimes(1);
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
-      expect(mockConnection.rollback).not.toHaveBeenCalled();
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalledTimes(1);
+      expect(mockUserRepository.updateUsersStatuses).toHaveBeenCalledWith(updates, mockQueryRunner);
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.rollbackTransaction).not.toHaveBeenCalled();
     });
 
     it('should handle single user update', async () => {
@@ -61,9 +62,9 @@ describe('UserService - updateUsersStatuses', () => {
       const result = await userService.updateUsersStatuses(updates);
 
       expect(result.updatedCount).toBe(1);
-      expect(mockConnection.beginTransaction).toHaveBeenCalledTimes(1);
-      expect(mockConnection.commit).toHaveBeenCalledTimes(1);
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
 
     it('should handle maximum 500 users', async () => {
@@ -77,9 +78,9 @@ describe('UserService - updateUsersStatuses', () => {
       const result = await userService.updateUsersStatuses(updates);
 
       expect(result.updatedCount).toBe(500);
-      expect(mockConnection.beginTransaction).toHaveBeenCalledTimes(1);
-      expect(mockConnection.commit).toHaveBeenCalledTimes(1);
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
 
     it('should handle all valid statuses', async () => {
@@ -94,7 +95,7 @@ describe('UserService - updateUsersStatuses', () => {
       const result = await userService.updateUsersStatuses(updates);
 
       expect(result.updatedCount).toBe(3);
-      expect(mockConnection.commit).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -104,9 +105,9 @@ describe('UserService - updateUsersStatuses', () => {
         .rejects
         .toThrow('No updates provided');
 
-      expect(mockConnection.beginTransaction).not.toHaveBeenCalled();
-      expect(mockConnection.commit).not.toHaveBeenCalled();
-      expect(mockConnection.rollback).not.toHaveBeenCalled();
+      expect(mockQueryRunner.startTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.rollbackTransaction).not.toHaveBeenCalled();
     });
 
     it('should throw error when updates is null', async () => {
@@ -131,7 +132,7 @@ describe('UserService - updateUsersStatuses', () => {
         .rejects
         .toThrow('Maximum 500 users can be updated at once');
 
-      expect(mockConnection.beginTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.startTransaction).not.toHaveBeenCalled();
     });
 
     it('should throw error for invalid status', async () => {
@@ -143,7 +144,7 @@ describe('UserService - updateUsersStatuses', () => {
         .rejects
         .toThrow('Invalid status: invalid. Must be one of: pending, active, blocked');
 
-      expect(mockConnection.beginTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.startTransaction).not.toHaveBeenCalled();
     });
 
     it('should throw error when one of multiple statuses is invalid', async () => {
@@ -172,10 +173,10 @@ describe('UserService - updateUsersStatuses', () => {
         .rejects
         .toThrow('Database connection failed');
 
-      expect(mockConnection.beginTransaction).toHaveBeenCalledTimes(1);
-      expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
-      expect(mockConnection.commit).not.toHaveBeenCalled();
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
 
     it('should rollback transaction on repository error', async () => {
@@ -191,10 +192,10 @@ describe('UserService - updateUsersStatuses', () => {
         .rejects
         .toThrow('Update failed');
 
-      expect(mockConnection.beginTransaction).toHaveBeenCalledTimes(1);
-      expect(mockConnection.rollback).toHaveBeenCalledTimes(1);
-      expect(mockConnection.commit).not.toHaveBeenCalled();
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.startTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).not.toHaveBeenCalled();
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
 
     it('should release connection even when rollback fails', async () => {
@@ -203,13 +204,13 @@ describe('UserService - updateUsersStatuses', () => {
       ];
 
       mockUserRepository.updateUsersStatuses.mockRejectedValue(new Error('Update failed'));
-      mockConnection.rollback.mockRejectedValue(new Error('Rollback failed'));
+      mockQueryRunner.rollbackTransaction.mockRejectedValue(new Error('Rollback failed'));
 
       await expect(userService.updateUsersStatuses(updates))
         .rejects
         .toThrow('Update failed');
 
-      expect(mockConnection.release).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.release).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -227,7 +228,7 @@ describe('UserService - updateUsersStatuses', () => {
       const result = await userService.updateUsersStatuses(updates);
 
       expect(result.updatedCount).toBe(2);
-      expect(mockConnection.commit).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
     });
 
     it('should handle updates with duplicate user IDs', async () => {
@@ -241,7 +242,7 @@ describe('UserService - updateUsersStatuses', () => {
       const result = await userService.updateUsersStatuses(updates);
 
       expect(result.updatedCount).toBe(1);
-      expect(mockConnection.commit).toHaveBeenCalledTimes(1);
+      expect(mockQueryRunner.commitTransaction).toHaveBeenCalledTimes(1);
     });
   });
 });

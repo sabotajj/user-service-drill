@@ -1,73 +1,72 @@
-import { Pool, RowDataPacket, PoolConnection } from 'mysql2/promise';
+import { Repository, DataSource, QueryRunner } from 'typeorm';
+import { Group as GroupEntity } from '../entities';
 import { Group } from '../types';
 
 export interface IGroupRepository {
   findAll(limit: number, offset: number): Promise<{ groups: Group[]; total: number }>;
-  removeUserFromGroup(userId: number, groupId: number, connection: PoolConnection): Promise<boolean>;
-  getGroupMemberCount(groupId: number, connection: PoolConnection): Promise<number>;
-  updateGroupStatus(groupId: number, status: string, connection: PoolConnection): Promise<void>;
-  getConnection(): Promise<PoolConnection>;
+  removeUserFromGroup(userId: number, groupId: number, queryRunner: QueryRunner): Promise<boolean>;
+  getGroupMemberCount(groupId: number, queryRunner: QueryRunner): Promise<number>;
+  updateGroupStatus(groupId: number, status: string, queryRunner: QueryRunner): Promise<void>;
+  getQueryRunner(): Promise<QueryRunner>;
 }
 
 export class GroupRepository implements IGroupRepository {
-  constructor(private pool: Pool) {}
+  private repository: Repository<GroupEntity>;
 
-  async getConnection(): Promise<PoolConnection> {
-    return await this.pool.getConnection();
+  constructor(private dataSource: DataSource) {
+    this.repository = dataSource.getRepository(GroupEntity);
+  }
+
+  async getQueryRunner(): Promise<QueryRunner> {
+    return this.dataSource.createQueryRunner();
   }
 
   async findAll(limit: number, offset: number): Promise<{ groups: Group[]; total: number }> {
-    const connection = await this.pool.getConnection();
-    
-    try {
-      // Get total count
-      const [countResult] = await connection.query<RowDataPacket[]>(
-        'SELECT COUNT(*) as total FROM `groups`'
-      );
-      const total = countResult[0].total;
+    const [entities, total] = await this.repository.findAndCount({
+      order: { createdAt: 'DESC' },
+      take: limit,
+      skip: offset,
+    });
 
-      // Get paginated groups ordered by created_at
-      const [rows] = await connection.query<RowDataPacket[]>(
-        'SELECT id, name, status, created_at as createdAt FROM `groups` ORDER BY created_at DESC LIMIT ? OFFSET ?',
-        [limit, offset]
-      );
+    const groups: Group[] = entities.map(entity => ({
+      id: entity.id,
+      name: entity.name,
+      description: '',
+      status: entity.status,
+      createdAt: entity.createdAt
+    }));
 
-      const groups: Group[] = rows.map(row => ({
-        id: row.id,
-        name: row.name,
-        description: '',
-        status: row.status,
-        createdAt: new Date(row.createdAt)
-      }));
-
-      return { groups, total };
-    } finally {
-      connection.release();
-    }
+    return { groups, total };
   }
 
-  async removeUserFromGroup(userId: number, groupId: number, connection: PoolConnection): Promise<boolean> {
-    const [result]: any = await connection.query(
-      'DELETE FROM user_groups WHERE user_id = ? AND group_id = ?',
-      [userId, groupId]
-    );
+  async removeUserFromGroup(userId: number, groupId: number, queryRunner: QueryRunner): Promise<boolean> {
+    const result = await queryRunner.manager
+      .createQueryBuilder()
+      .delete()
+      .from('user_groups')
+      .where('user_id = :userId AND group_id = :groupId', { userId, groupId })
+      .execute();
     
-    return result.affectedRows > 0;
+    return (result.affected || 0) > 0;
   }
 
-  async getGroupMemberCount(groupId: number, connection: PoolConnection): Promise<number> {
-    const [rows] = await connection.query<RowDataPacket[]>(
-      'SELECT COUNT(*) as count FROM user_groups WHERE group_id = ?',
-      [groupId]
-    );
+  async getGroupMemberCount(groupId: number, queryRunner: QueryRunner): Promise<number> {
+    const result = await queryRunner.manager
+      .createQueryBuilder()
+      .select('COUNT(*)', 'count')
+      .from('user_groups', 'ug')
+      .where('ug.group_id = :groupId', { groupId })
+      .getRawOne();
     
-    return rows[0].count;
+    return parseInt(result?.count || '0');
   }
 
-  async updateGroupStatus(groupId: number, status: string, connection: PoolConnection): Promise<void> {
-    await connection.query(
-      'UPDATE `groups` SET status = ? WHERE id = ?',
-      [status, groupId]
-    );
+  async updateGroupStatus(groupId: number, status: string, queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.manager
+      .createQueryBuilder()
+      .update(GroupEntity)
+      .set({ status })
+      .where('id = :groupId', { groupId })
+      .execute();
   }
 }
