@@ -29,8 +29,8 @@ INSERT INTO users (name, email) VALUES ('John Doe', 'john@example.com');
 INSERT INTO users (name, email) VALUES ('Jane Smith', 'jane@example.com');
 
 -- Insert initial data into groups table
-INSERT INTO `groups` (name, status) VALUES ('Admins', 'NotEmpty');
-INSERT INTO `groups` (name, status) VALUES ('Users', 'NotEmpty');
+INSERT INTO `groups` (name, status) VALUES ('Admins', 'notEmpty');
+INSERT INTO `groups` (name, status) VALUES ('Users', 'notEmpty');
 
 -- Insert initial data into user_groups table
 INSERT INTO user_groups (user_id, group_id) VALUES (1, 1);
