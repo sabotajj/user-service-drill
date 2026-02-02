@@ -37,7 +37,11 @@ export class GroupService implements IGroupService {
       const removed = await this.groupRepository.removeUserFromGroup(userId, groupId, connection);
 
       if (!removed) {
-        await connection.rollback();
+        try {
+          await connection.rollback();
+        } catch (rollbackError) {
+          console.error('Rollback failed:', rollbackError);
+        }
         return {
           success: false,
           message: 'User is not a member of this group'
@@ -60,7 +64,11 @@ export class GroupService implements IGroupService {
       };
     } catch (error) {
       // Rollback on error
-      await connection.rollback();
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error('Rollback failed:', rollbackError);
+      }
       throw error;
     } finally {
       connection.release();
