@@ -1,11 +1,30 @@
 import { IGroupRepository } from '../repositories/groupRepository';
+import { Group, PaginatedResponse } from '../types';
 
 export interface IGroupService {
+  getAllGroups(limit: number, offset: number): Promise<PaginatedResponse<Group>>;
   removeUserFromGroup(userId: number, groupId: number): Promise<{ success: boolean; message: string }>;
 }
 
 export class GroupService implements IGroupService {
   constructor(private groupRepository: IGroupRepository) {}
+
+  async getAllGroups(limit: number, offset: number): Promise<PaginatedResponse<Group>> {
+    // Validate input
+    const validLimit = Math.min(Math.max(limit, 1), 100); // Max 100 items per page
+    const validOffset = Math.max(offset, 0);
+
+    const { groups, total } = await this.groupRepository.findAll(validLimit, validOffset);
+
+    return {
+      data: groups,
+      pagination: {
+        limit: validLimit,
+        offset: validOffset,
+        total
+      }
+    };
+  }
 
   async removeUserFromGroup(userId: number, groupId: number): Promise<{ success: boolean; message: string }> {
     const connection = await this.groupRepository.getConnection();

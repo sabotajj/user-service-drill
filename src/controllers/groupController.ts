@@ -4,22 +4,28 @@ import { IGroupService } from '../services/groupService';
 export class GroupController {
   constructor(private groupService: IGroupService) {}
 
-  getAllGroups = (req: Request, res: Response): void => {
-    const { limit = '10', offset = '0' } = req.query;
-    
-    // Dummy endpoint - returns HTTP 200
-    res.status(200).json({
-      success: true,
-      message: 'Get all groups with pagination',
-      data: {
-        groups: [],
-        pagination: {
-          limit: parseInt(limit as string),
-          offset: parseInt(offset as string),
-          total: 0
-        }
-      }
-    });
+  getAllGroups = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { limit = '10', offset = '0' } = req.query;
+      
+      const result = await this.groupService.getAllGroups(
+        parseInt(limit as string),
+        parseInt(offset as string)
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Get all groups with pagination',
+        data: result.data,
+        pagination: result.pagination
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error fetching groups',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
   };
 
   removeUserFromGroup = async (req: Request, res: Response): Promise<void> => {
