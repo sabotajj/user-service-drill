@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 
 export const getAllGroups = (req: Request, res: Response): void => {
-  const { page = '1', limit = '10' } = req.query;
+  const { limit = '10', offset = '0' } = req.query;
   
   // Dummy endpoint - returns HTTP 200
   res.status(200).json({
@@ -10,10 +10,9 @@ export const getAllGroups = (req: Request, res: Response): void => {
     data: {
       groups: [],
       pagination: {
-        page: parseInt(page as string),
         limit: parseInt(limit as string),
-        total: 0,
-        totalPages: 0
+        offset: parseInt(offset as string),
+        total: 0
       }
     }
   });

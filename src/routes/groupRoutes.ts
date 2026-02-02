@@ -3,7 +3,7 @@ import { getAllGroups, removeUserFromGroup } from '../controllers/groupControlle
 
 const router = Router();
 
-// GET /api/groups?page=1&limit=10
+// GET /api/groups?limit=10&offset=0
 router.get('/', getAllGroups);
 
 // DELETE /api/groups/:groupId/users/:userId
