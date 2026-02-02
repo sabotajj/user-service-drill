@@ -1,5 +1,6 @@
 import { IUserRepository } from '../repositories/userRepository';
 import { User, PaginatedResponse, UserStatusUpdate } from '../types';
+import { PAGINATION, BATCH_OPERATIONS } from '../constants';
 
 export interface IUserService {
   getAllUsers(limit: number, offset: number): Promise<PaginatedResponse<User>>;
@@ -10,9 +11,8 @@ export class UserService implements IUserService {
   constructor(private userRepository: IUserRepository) {}
 
   async getAllUsers(limit: number, offset: number): Promise<PaginatedResponse<User>> {
-    // Validate input
-    const validLimit = Math.min(Math.max(limit, 1), 100); // Max 100 items per page
-    const validOffset = Math.max(offset, 0);
+    const validLimit = Math.min(Math.max(limit, PAGINATION.MIN_LIMIT), PAGINATION.MAX_LIMIT);
+    const validOffset = Math.max(offset, PAGINATION.MIN_OFFSET);
 
     const { users, total } = await this.userRepository.findAll(validLimit, validOffset);
 
@@ -27,21 +27,12 @@ export class UserService implements IUserService {
   }
 
   async updateUsersStatuses(updates: UserStatusUpdate[]): Promise<{ updatedCount: number }> {
-    // Validate input
     if (!updates || updates.length === 0) {
       throw new Error('No updates provided');
     }
 
-    if (updates.length > 500) {
-      throw new Error('Maximum 500 users can be updated at once');
-    }
-
-    // Validate statuses
-    const validStatuses = ['pending', 'active', 'blocked'];
-    for (const update of updates) {
-      if (!validStatuses.includes(update.status)) {
-        throw new Error(`Invalid status: ${update.status}. Must be one of: ${validStatuses.join(', ')}`);
-      }
+    if (updates.length > BATCH_OPERATIONS.MAX_BULK_STATUS_UPDATES) {
+      throw new Error(`Maximum ${BATCH_OPERATIONS.MAX_BULK_STATUS_UPDATES} users can be updated at once`);
     }
 
     const queryRunner = await this.userRepository.getQueryRunner();

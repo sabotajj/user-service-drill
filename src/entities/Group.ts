@@ -1,6 +1,11 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToMany, JoinTable } from 'typeorm';
 import { User } from './User';
 
+export enum GroupStatus {
+  EMPTY = 'empty',
+  NOT_EMPTY = 'notEmpty'
+}
+
 @Entity('groups')
 export class Group {
   @PrimaryGeneratedColumn()
@@ -9,8 +14,12 @@ export class Group {
   @Column({ type: 'varchar', length: 255 })
   name!: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  status!: string;
+  @Column({
+    type: 'enum',
+    enum: GroupStatus,
+    default: GroupStatus.NOT_EMPTY
+  })
+  status!: GroupStatus;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;

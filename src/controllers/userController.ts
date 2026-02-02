@@ -10,13 +10,13 @@ export class UserController {
       // Validation is handled by middleware, data is already validated and transformed
       const { limit, offset } = req.query as unknown as { limit: number; offset: number };
       
-      const result = await this.userService.getAllUsers(limit, offset);
+      const paginatedUsers = await this.userService.getAllUsers(limit, offset);
 
       res.status(200).json({
         success: true,
         message: 'Get all users with pagination',
-        data: result.data,
-        pagination: result.pagination
+        data: paginatedUsers.data,
+        pagination: paginatedUsers.pagination
       });
     } catch (error) {
       res.status(500).json({
@@ -32,13 +32,13 @@ export class UserController {
       // Validation is handled by middleware, data is already validated
       const { updates } = req.body;
 
-      const result = await this.userService.updateUsersStatuses(updates);
+      const updateResult = await this.userService.updateUsersStatuses(updates);
       
       res.status(200).json({
         success: true,
-        message: `Updated statuses for ${result.updatedCount} users`,
+        message: `Updated statuses for ${updateResult.updatedCount} users`,
         data: {
-          updatedCount: result.updatedCount
+          updatedCount: updateResult.updatedCount
         }
       });
     } catch (error) {

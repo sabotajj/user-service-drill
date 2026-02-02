@@ -134,30 +134,6 @@ describe('UserService - updateUsersStatuses', () => {
 
       expect(mockQueryRunner.startTransaction).not.toHaveBeenCalled();
     });
-
-    it('should throw error for invalid status', async () => {
-      const updates: UserStatusUpdate[] = [
-        { userId: 1, status: 'invalid' as any }
-      ];
-
-      await expect(userService.updateUsersStatuses(updates))
-        .rejects
-        .toThrow('Invalid status: invalid. Must be one of: pending, active, blocked');
-
-      expect(mockQueryRunner.startTransaction).not.toHaveBeenCalled();
-    });
-
-    it('should throw error when one of multiple statuses is invalid', async () => {
-      const updates: UserStatusUpdate[] = [
-        { userId: 1, status: UserStatus.ACTIVE },
-        { userId: 2, status: 'invalid' as any },
-        { userId: 3, status: UserStatus.BLOCKED }
-      ];
-
-      await expect(userService.updateUsersStatuses(updates))
-        .rejects
-        .toThrow('Invalid status: invalid');
-    });
   });
 
   describe('Transaction rollback', () => {

@@ -37,19 +37,19 @@ export class UserRepository implements IUserRepository {
   }
 
   async updateUsersStatuses(updates: UserStatusUpdate[], queryRunner: QueryRunner): Promise<number> {
-    let updatedCount = 0;
+    let totalUpdatedCount = 0;
 
     for (const update of updates) {
-      const result = await queryRunner.manager
+      const updateResult = await queryRunner.manager
         .createQueryBuilder()
         .update(UserEntity)
         .set({ status: update.status })
         .where('id = :userId', { userId: update.userId })
         .execute();
       
-      updatedCount += result.affected || 0;
+      totalUpdatedCount += updateResult.affected || 0;
     }
 
-    return updatedCount;
+    return totalUpdatedCount;
   }
 }

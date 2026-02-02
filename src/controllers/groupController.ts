@@ -9,13 +9,13 @@ export class GroupController {
       // Validation is handled by middleware, data is already validated and transformed
       const { limit, offset } = req.query as unknown as { limit: number; offset: number };
       
-      const result = await this.groupService.getAllGroups(limit, offset);
+      const paginatedGroups = await this.groupService.getAllGroups(limit, offset);
 
       res.status(200).json({
         success: true,
         message: 'Get all groups with pagination',
-        data: result.data,
-        pagination: result.pagination
+        data: paginatedGroups.data,
+        pagination: paginatedGroups.pagination
       });
     } catch (error) {
       res.status(500).json({
@@ -31,12 +31,12 @@ export class GroupController {
       // Validation is handled by middleware, data is already validated and transformed
       const { groupId, userId } = req.params as unknown as { groupId: number; userId: number };
       
-      const result = await this.groupService.removeUserFromGroup(userId, groupId);
+      const removalResult = await this.groupService.removeUserFromGroup(userId, groupId);
 
-      if (!result.success) {
+      if (!removalResult.success) {
         res.status(404).json({
           success: false,
-          message: result.message,
+          message: removalResult.message,
           data: null
         });
         return;
@@ -44,7 +44,7 @@ export class GroupController {
 
       res.status(200).json({
         success: true,
-        message: result.message,
+        message: removalResult.message,
         data: null
       });
     } catch (error) {

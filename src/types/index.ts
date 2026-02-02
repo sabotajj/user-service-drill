@@ -1,4 +1,5 @@
 import { UserStatus } from '../entities/User';
+import { GroupStatus } from '../entities/Group';
 
 export interface User {
   id: number;
@@ -11,7 +12,7 @@ export interface Group {
   id: number;
   name: string;
   description: string;
-  status: string;
+  status: GroupStatus;
   createdAt: Date;
 }
 
@@ -20,8 +21,8 @@ export interface PaginationQuery {
   offset?: string;
 }
 
-// Re-export UserStatus enum for convenience
-export { UserStatus };
+// Re-export enums for convenience
+export { UserStatus, GroupStatus };
 
 export interface UserStatusUpdate {
   userId: number;

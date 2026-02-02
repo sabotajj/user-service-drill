@@ -1,12 +1,12 @@
 import { Repository, DataSource, QueryRunner } from 'typeorm';
-import { Group as GroupEntity } from '../entities';
+import { Group as GroupEntity, GroupStatus } from '../entities';
 import { Group } from '../types';
 
 export interface IGroupRepository {
   findAll(limit: number, offset: number): Promise<{ groups: Group[]; total: number }>;
   removeUserFromGroup(userId: number, groupId: number, queryRunner: QueryRunner): Promise<boolean>;
   getGroupMemberCount(groupId: number, queryRunner: QueryRunner): Promise<number>;
-  updateGroupStatus(groupId: number, status: string, queryRunner: QueryRunner): Promise<void>;
+  updateGroupStatus(groupId: number, status: GroupStatus, queryRunner: QueryRunner): Promise<void>;
   getQueryRunner(): Promise<QueryRunner>;
 }
 
@@ -40,28 +40,28 @@ export class GroupRepository implements IGroupRepository {
   }
 
   async removeUserFromGroup(userId: number, groupId: number, queryRunner: QueryRunner): Promise<boolean> {
-    const result = await queryRunner.manager
+    const deleteResult = await queryRunner.manager
       .createQueryBuilder()
       .delete()
       .from('user_groups')
       .where('user_id = :userId AND group_id = :groupId', { userId, groupId })
       .execute();
     
-    return (result.affected || 0) > 0;
+    return (deleteResult.affected || 0) > 0;
   }
 
   async getGroupMemberCount(groupId: number, queryRunner: QueryRunner): Promise<number> {
-    const result = await queryRunner.manager
+    const countResult = await queryRunner.manager
       .createQueryBuilder()
       .select('COUNT(*)', 'count')
       .from('user_groups', 'ug')
       .where('ug.group_id = :groupId', { groupId })
       .getRawOne();
     
-    return parseInt(result?.count || '0');
+    return parseInt(countResult?.count || '0');
   }
 
-  async updateGroupStatus(groupId: number, status: string, queryRunner: QueryRunner): Promise<void> {
+  async updateGroupStatus(groupId: number, status: GroupStatus, queryRunner: QueryRunner): Promise<void> {
     await queryRunner.manager
       .createQueryBuilder()
       .update(GroupEntity)

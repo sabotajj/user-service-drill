@@ -1,5 +1,6 @@
 import { IGroupRepository } from '../repositories/groupRepository';
-import { Group, PaginatedResponse } from '../types';
+import { Group, PaginatedResponse, GroupStatus } from '../types';
+import { PAGINATION } from '../constants';
 
 export interface IGroupService {
   getAllGroups(limit: number, offset: number): Promise<PaginatedResponse<Group>>;
@@ -10,9 +11,8 @@ export class GroupService implements IGroupService {
   constructor(private groupRepository: IGroupRepository) {}
 
   async getAllGroups(limit: number, offset: number): Promise<PaginatedResponse<Group>> {
-    // Validate input
-    const validLimit = Math.min(Math.max(limit, 1), 100); // Max 100 items per page
-    const validOffset = Math.max(offset, 0);
+    const validLimit = Math.min(Math.max(limit, PAGINATION.MIN_LIMIT), PAGINATION.MAX_LIMIT);
+    const validOffset = Math.max(offset, PAGINATION.MIN_OFFSET);
 
     const { groups, total } = await this.groupRepository.findAll(validLimit, validOffset);
 
@@ -34,10 +34,9 @@ export class GroupService implements IGroupService {
       // Start transaction
       await queryRunner.startTransaction();
 
-      // Remove user from group
-      const removed = await this.groupRepository.removeUserFromGroup(userId, groupId, queryRunner);
+      const wasRemoved = await this.groupRepository.removeUserFromGroup(userId, groupId, queryRunner);
 
-      if (!removed) {
+      if (!wasRemoved) {
         try {
           await queryRunner.rollbackTransaction();
         } catch (rollbackError) {
@@ -49,11 +48,8 @@ export class GroupService implements IGroupService {
         };
       }
 
-      // Check remaining members in the group
-      const memberCount = await this.groupRepository.getGroupMemberCount(groupId, queryRunner);
-
-      // Update group status based on member count
-      const newStatus = memberCount === 0 ? 'empty' : 'notEmpty';
+      const remainingMemberCount = await this.groupRepository.getGroupMemberCount(groupId, queryRunner);
+      const newStatus = remainingMemberCount === 0 ? GroupStatus.EMPTY : GroupStatus.NOT_EMPTY;
       await this.groupRepository.updateGroupStatus(groupId, newStatus, queryRunner);
 
       // Commit transaction
