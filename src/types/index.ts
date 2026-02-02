@@ -2,12 +2,15 @@ export interface User {
   id: number;
   name: string;
   email: string;
+  createdAt: Date;
 }
 
 export interface Group {
   id: number;
   name: string;
   description: string;
+  status: string;
+  createdAt: Date;
 }
 
 export interface PaginationQuery {
@@ -24,4 +27,21 @@ export interface UserStatusUpdate {
 
 export interface UpdateUserStatusRequest {
   updates: UserStatusUpdate[];
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    limit: number;
+    offset: number;
+    total: number;
+  };
+}
+
+export interface DatabaseConfig {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  database: string;
 }
