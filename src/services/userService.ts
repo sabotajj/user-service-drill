@@ -59,7 +59,12 @@ export class UserService implements IUserService {
       return { updatedCount };
     } catch (error) {
       // Rollback on error
-      await connection.rollback();
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        // Log rollback error but don't throw - we want to release the connection
+        console.error('Rollback failed:', rollbackError);
+      }
       throw error;
     } finally {
       connection.release();
