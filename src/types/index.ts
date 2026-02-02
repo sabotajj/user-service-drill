@@ -1,3 +1,5 @@
+import { UserStatus } from '../entities/User';
+
 export interface User {
   id: number;
   name: string;
@@ -18,7 +20,8 @@ export interface PaginationQuery {
   offset?: string;
 }
 
-export type UserStatus = 'pending' | 'active' | 'blocked';
+// Re-export UserStatus enum for convenience
+export { UserStatus };
 
 export interface UserStatusUpdate {
   userId: number;

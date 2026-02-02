@@ -1,6 +1,6 @@
 import { UserService } from '../userService';
 import { IUserRepository } from '../../repositories/userRepository';
-import { UserStatusUpdate } from '../../types';
+import { UserStatusUpdate, UserStatus } from '../../types';
 import { QueryRunner } from 'typeorm';
 
 describe('UserService - updateUsersStatuses', () => {
@@ -36,8 +36,8 @@ describe('UserService - updateUsersStatuses', () => {
   describe('Success cases', () => {
     it('should update users statuses successfully', async () => {
       const updates: UserStatusUpdate[] = [
-        { userId: 1, status: 'active' },
-        { userId: 2, status: 'blocked' }
+        { userId: 1, status: UserStatus.ACTIVE },
+        { userId: 2, status: UserStatus.BLOCKED }
       ];
 
       mockUserRepository.updateUsersStatuses.mockResolvedValue(2);
@@ -54,7 +54,7 @@ describe('UserService - updateUsersStatuses', () => {
 
     it('should handle single user update', async () => {
       const updates: UserStatusUpdate[] = [
-        { userId: 1, status: 'pending' }
+        { userId: 1, status: UserStatus.PENDING }
       ];
 
       mockUserRepository.updateUsersStatuses.mockResolvedValue(1);
@@ -70,7 +70,7 @@ describe('UserService - updateUsersStatuses', () => {
     it('should handle maximum 500 users', async () => {
       const updates: UserStatusUpdate[] = Array.from({ length: 500 }, (_, i) => ({
         userId: i + 1,
-        status: 'active' as const
+        status: UserStatus.ACTIVE
       }));
 
       mockUserRepository.updateUsersStatuses.mockResolvedValue(500);
@@ -85,9 +85,9 @@ describe('UserService - updateUsersStatuses', () => {
 
     it('should handle all valid statuses', async () => {
       const updates: UserStatusUpdate[] = [
-        { userId: 1, status: 'pending' },
-        { userId: 2, status: 'active' },
-        { userId: 3, status: 'blocked' }
+        { userId: 1, status: UserStatus.PENDING },
+        { userId: 2, status: UserStatus.ACTIVE },
+        { userId: 3, status: UserStatus.BLOCKED }
       ];
 
       mockUserRepository.updateUsersStatuses.mockResolvedValue(3);
@@ -125,7 +125,7 @@ describe('UserService - updateUsersStatuses', () => {
     it('should throw error when exceeding 500 users limit', async () => {
       const updates: UserStatusUpdate[] = Array.from({ length: 501 }, (_, i) => ({
         userId: i + 1,
-        status: 'active' as const
+        status: UserStatus.ACTIVE
       }));
 
       await expect(userService.updateUsersStatuses(updates))
@@ -149,9 +149,9 @@ describe('UserService - updateUsersStatuses', () => {
 
     it('should throw error when one of multiple statuses is invalid', async () => {
       const updates: UserStatusUpdate[] = [
-        { userId: 1, status: 'active' },
+        { userId: 1, status: UserStatus.ACTIVE },
         { userId: 2, status: 'invalid' as any },
-        { userId: 3, status: 'blocked' }
+        { userId: 3, status: UserStatus.BLOCKED }
       ];
 
       await expect(userService.updateUsersStatuses(updates))
@@ -163,7 +163,7 @@ describe('UserService - updateUsersStatuses', () => {
   describe('Transaction rollback', () => {
     it('should rollback transaction on database error', async () => {
       const updates: UserStatusUpdate[] = [
-        { userId: 1, status: 'active' }
+        { userId: 1, status: UserStatus.ACTIVE }
       ];
 
       const dbError = new Error('Database connection failed');
@@ -181,8 +181,8 @@ describe('UserService - updateUsersStatuses', () => {
 
     it('should rollback transaction on repository error', async () => {
       const updates: UserStatusUpdate[] = [
-        { userId: 1, status: 'active' },
-        { userId: 2, status: 'blocked' }
+        { userId: 1, status: UserStatus.ACTIVE },
+        { userId: 2, status: UserStatus.BLOCKED }
       ];
 
       const repoError = new Error('Update failed');
@@ -200,7 +200,7 @@ describe('UserService - updateUsersStatuses', () => {
 
     it('should release connection even when rollback fails', async () => {
       const updates: UserStatusUpdate[] = [
-        { userId: 1, status: 'active' }
+        { userId: 1, status: UserStatus.ACTIVE }
       ];
 
       // Mock console.error to suppress expected error output
@@ -223,9 +223,9 @@ describe('UserService - updateUsersStatuses', () => {
   describe('Edge cases', () => {
     it('should handle partial updates (some users not found)', async () => {
       const updates: UserStatusUpdate[] = [
-        { userId: 1, status: 'active' },
-        { userId: 999, status: 'blocked' }, // User doesn't exist
-        { userId: 3, status: 'pending' }
+        { userId: 1, status: UserStatus.ACTIVE },
+        { userId: 999, status: UserStatus.BLOCKED }, // User doesn't exist
+        { userId: 3, status: UserStatus.PENDING }
       ];
 
       // Only 2 users were actually updated
@@ -239,8 +239,8 @@ describe('UserService - updateUsersStatuses', () => {
 
     it('should handle updates with duplicate user IDs', async () => {
       const updates: UserStatusUpdate[] = [
-        { userId: 1, status: 'active' },
-        { userId: 1, status: 'blocked' } // Duplicate ID
+        { userId: 1, status: UserStatus.ACTIVE },
+        { userId: 1, status: UserStatus.BLOCKED } // Duplicate ID
       ];
 
       mockUserRepository.updateUsersStatuses.mockResolvedValue(1);

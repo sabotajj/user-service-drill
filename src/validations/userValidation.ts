@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { UserStatus } from '../entities/User';
 
 // Validation for pagination query parameters
 export const paginationQuerySchema = z.object({
@@ -18,9 +19,9 @@ export const paginationQuerySchema = z.object({
     })
 });
 
-// Validation for user status
-export const userStatusSchema = z.enum(['pending', 'active', 'blocked'], {
-  errorMap: () => ({ message: 'Status must be one of: pending, active, blocked' })
+// Validation for user status - using enum from entity
+export const userStatusSchema = z.enum([UserStatus.PENDING, UserStatus.ACTIVE, UserStatus.BLOCKED], {
+  errorMap: () => ({ message: `Status must be one of: ${Object.values(UserStatus).join(', ')}` })
 });
 
 // Validation for single user status update
