@@ -33,8 +33,8 @@ export class GroupController {
       const { groupId, userId } = req.params;
       
       const result = await this.groupService.removeUserFromGroup(
-        parseInt(userId),
-        parseInt(groupId)
+        parseInt(userId as string),
+        parseInt(groupId as string)
       );
 
       if (!result.success) {
